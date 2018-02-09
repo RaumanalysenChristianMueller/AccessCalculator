@@ -2,7 +2,7 @@
 # Raumanalysen - Christian Müller
 # raumanalysen@mailbox.org
 
-createTransitionRaster <- function(networkLines, costRasCellSize, studyArea){
+createTransitionRaster <- function(networkLines, transRasCellSize, studyArea){
   
   # load packages
   cat("Loading R-Packages...")
@@ -13,6 +13,7 @@ createTransitionRaster <- function(networkLines, costRasCellSize, studyArea){
     if (!require("raster")) install.packages("raster", dependencies = T)
     if (!require("plotKML")) install.packages("plotKML", dependencies = T)
     if (!require("RSAGA")) install.packages("RSAGA", dependencies = T)
+    if (!require("gdalUtils")) install.packages("gdalUtils", dependencies = T)
   }
   
   # get extent from study area
@@ -22,35 +23,27 @@ createTransitionRaster <- function(networkLines, costRasCellSize, studyArea){
   proj <- CRS(proj4string(networkLines))
   
   # create raster
-  ras <- raster(resolution = rep(costRasCellSize, 2), ext = ext, crs = proj)
-  values(ras) <- -1
+  ras <- raster(resolution = rep(transRasCellSize, 2), ext = ext, crs = proj)
+  values(ras) <- 0
+  
+  
+  # # write temp files for gdal operation
+  # tempRas_path <- paste0(tempfile(), ".tif")
+  # writeRaster(ras, file = tempRas_path, format = "ascii", prj = T, overwrite = T)
+  # tempShp_path <- paste0(tempfile(), ".shp")
+  # writeOGR(networkLines, dirname(tempShp_path), strsplit(basename(tempShp_path), ".", fixed = T)[[1]][1],
+  #          driver = "ESRI Shapefile", overwrite_layer = T)
   
   # rasterize network lines
   tras <- rasterize(networkLines, ras, fun = "first")  # revision until here
   
-  # # We'll pre-check to make sure there is a valid GDAL install
-  # # and that raster and rgdal are also installed.
-  # # Note this isn't strictly neccessary, as executing the function will
-  # # force a search for a valid GDAL install.
+  # os.system("ogr2ogr -t_srs EPSG:102001 %s %s" % (tempShp_path, tempShp_path)) # output then input
+  # 
   # gdal_setInstallation()
-  # valid_install <- !is.null(getOption("gdalUtils_gdalPath"))
-  # if(require(raster) && require(rgdal) && valid_install)
-  # {
-  #   # Example from the original gdal_rasterize documentation:
-  #   # gdal_rasterize -b 1 -b 2 -b 3 -burn 255 -burn 0
-  #   # 	-burn 0 -l tahoe_highrez_training tahoe_highrez_training.shp tempfile.tif
-  #   dst_filename_original  <- system.file("external/tahoe_highrez.tif", package="gdalUtils")
-  #   # Back up the file, since we are going to burn stuff into it.
-  #   dst_filename <- paste(tempfile(),".tif",sep="")
-  #   file.copy(dst_filename_original,dst_filename,overwrite=TRUE)
-  #   #Before plot:
-  #   plotRGB(brick(dst_filename))
-  #   src_dataset <- system.file("external/tahoe_highrez_training.shp", package="gdalUtils")
-  #   tahoe_burned <- gdal_rasterize(src_dataset,dst_filename,
-  #                                  b=c(1,2,3),burn=c(0,255,0),l="tahoe_highrez_training",verbose=TRUE,output_Raster=TRUE)
-  #   #After plot:
-  #   plotRGB(brick(dst_filename))
-  # }
+  # tras <- gdal_rasterize(tempShp_path, tempRas_path, b = 1, burn = transRasCellSize,
+  #                        l = strsplit(basename(tempShp_path), ".", fixed = T)[[1]][1],
+  #                        verbose = T, output_Raster = T)
+  
   
   # build transition raster, fill with values and conduct geographic correction 
   values(tras)[which(is.na(values(tras)) == F)] <- costRasCellSize

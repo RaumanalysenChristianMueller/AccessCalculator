@@ -32,11 +32,11 @@
 fromPoints <- Zu_erreichende_Punkte
 networkLines <- Wegenetz
 studyArea <- Untersuchungsgebiet
-costRasCellSize <- Gitterzellengroesse_fuer_Wegenetz
+transRasCellSize <- Gitterzellengroesse_fuer_Wegenetz
 gridCellSize <- Gitterzellengroesse_der_Ausgabe
 
 shortestDistance <- function(fromPoints, networkLines, studyArea,
-                             costRasCellSize, gridCellSize){
+                             transRasCellSize, gridCellSize){
   
   # load packages
   cat("Loading R-Packages...")
@@ -46,7 +46,7 @@ shortestDistance <- function(fromPoints, networkLines, studyArea,
     if (!require("rgeos")) install.packages("rgeos", dependencies = T)
     if (!require("SpatialTools")) install.packages("SpatialTools", dependencies = T)
     if (!require("maptools")) install.packages("maptools", dependencies = T)
-  }
+  }                      
   
   # create cost raster
   pr_bar <- winProgressBar(title = "AccessibilityCalculator - Raumanalysen_Christian_Müller",
