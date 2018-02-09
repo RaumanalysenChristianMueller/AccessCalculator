@@ -14,6 +14,10 @@ createTransitionRaster <- function(networkLines, transRasCellSize, studyArea){
     if (!require("plotKML")) install.packages("plotKML", dependencies = T)
     if (!require("RSAGA")) install.packages("RSAGA", dependencies = T)
     if (!require("gdalUtils")) install.packages("gdalUtils", dependencies = T)
+    if (!require("RQGIS")){
+      if (Sys.info()["sysname"] == "Linux") system("gksudo apt-get install libudunits2-dev")
+      install.packages("RQGIS", dependencies = T)
+    }
   }
   
   # get extent from study area
@@ -37,12 +41,20 @@ createTransitionRaster <- function(networkLines, transRasCellSize, studyArea){
   # rasterize network lines
   tras <- rasterize(networkLines, ras, fun = "first")  # revision until here
   
+  # alternative 1:
   # os.system("ogr2ogr -t_srs EPSG:102001 %s %s" % (tempShp_path, tempShp_path)) # output then input
   # 
   # gdal_setInstallation()
   # tras <- gdal_rasterize(tempShp_path, tempRas_path, b = 1, burn = transRasCellSize,
   #                        l = strsplit(basename(tempShp_path), ".", fixed = T)[[1]][1],
   #                        verbose = T, output_Raster = T)
+  
+  # more alternatives:
+  # v.to.rast.attribute()
+  # v.to.rast.value()
+  # gdalogr:rasterize()
+  # gdalogr:rasterize_over()
+  
   
   
   # build transition raster, fill with values and conduct geographic correction 

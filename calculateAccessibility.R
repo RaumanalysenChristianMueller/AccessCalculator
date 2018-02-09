@@ -35,6 +35,7 @@ studyArea <- Untersuchungsgebiet
 transRasCellSize <- Gitterzellengroesse_fuer_Wegenetz
 gridCellSize <- Gitterzellengroesse_der_Ausgabe
 
+
 shortestDistance <- function(fromPoints, networkLines, studyArea,
                              transRasCellSize, gridCellSize){
   
