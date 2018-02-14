@@ -9,7 +9,6 @@
 ##Zu_erreichende_Punkte = vector
 ##Wegenetz = vector
 ##Untersuchungsgebiet = vector
-##Gitterzellengroesse_fuer_Wegenetz = number
 ##Ausgabe_Shapefile = output vector
 ##Ausgabe_Raster = output raster
 
@@ -18,14 +17,12 @@
 # Zu_erreichende_Punkte = readOGR("C:/HochschuleBochum/Daten/Bochum/Hiwis_Datenerhebung_Bochum/einzelPOIs", "OwnSurvey_rathaus")
 # Wegenetz = readOGR("C:/HochschuleBochum/Daten/Bochum/Netzwerke", "FussWanderwege")
 # Untersuchungsgebiet = readOGR("C:/HochschuleBochum/Daten/Bochum", "StudyArea")
-# Gitterzellengroesse_fuer_Wegenetz = 50
 
 # test parameters for linux
 # Ausgangspunkte = readOGR("/media/sf_HochschuleBochum/Daten/Bochum/Stadtgruen", "Gruenflaechen")
 # Zu_erreichende_Punkte = readOGR("/media/sf_HochschuleBochum/Daten/Bochum/Hiwis_Datenerhebung_Bochum/einzelPOIs", "OwnSurvey_rathaus")
 # Wegenetz = readOGR("/media/sf_HochschuleBochum/Daten/Bochum/Netzwerke", "FussWanderwege")
 # Untersuchungsgebiet = readOGR("/media/sf_HochschuleBochum/Daten/Bochum", "StudyArea")
-# Gitterzellengroesse_fuer_Wegenetz = 50
 
 
 # rewrite variable names (as GUI is in German)
@@ -33,7 +30,7 @@ toPoints <- Zu_erreichende_Punkte
 fromPoints <- Ausgangspunkte
 networkLines <- Wegenetz
 studyArea <- Untersuchungsgebiet
-transRasCellSize <- Gitterzellengroesse_fuer_Wegenetz
+transRasCellSize <- 10
 
 
 # defince function
@@ -50,7 +47,24 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
       install.packages("RQGIS", dependencies = T)
     }
     if (!require("gdistance")) install.packages("gdistance", dependencies = T)
+    if (!require("rgeos")) install.packages("rgeos", dependencies = T)
+    if (!require("tcltk")) install.packages("tcltk", dependencies = T)
+    if (!require("tcltk2")) install.packages("tcltk2", dependencies = T)
   }                      
+  
+  # create progress bar
+  try(tk <- tktoplevel(), silent = T)
+  try(tk2ico.setFromFile(win = tk, iconfile =  paste0(getwd(), "/Logo.ico")), silent = T)
+  try(tktitle(tk) <- "Raumanalysen - Christian Mueller - Accessibility Calculator", silent = T)
+  try(tk_lab <- tk2label(tk), silent = T)
+  try(tk_pb <- tk2progress(tk, length = 400), silent = T)
+  try(tkgrid(tk_lab, row = 0), silent = T)
+  try(tkgrid(tk_pb, row = 1), silent = T)
+  
+  
+  # report status
+  try(tkconfigure(tk_lab, text = "Analyseraster wird vorbereitet..."), silent = T)
+  try(tkconfigure(tk_pb, value = 5, maximum = 100), silent = T)
   
   
   # get extent from study area
@@ -61,12 +75,19 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   
   # create raster
   ras <- raster(resolution = rep(transRasCellSize, 2), ext = ext, crs = proj)
-  values(ras) <- 0
+  values(ras) <- NA
   
   # prepare dummy field in vector data
   if (!("AccessDum" %in% colnames(networkLines@data))){
-    networkLines@data <- cbind(networkLines@data, AccessDum = transRasCellSize)
+    networkLines@data <- cbind(networkLines@data, AccessDum = 1)
   }
+  
+  
+  # report status
+  try(tkconfigure(tk_lab, text = "Konvertiere Wegenetz zu Raster..."), silent = T)
+  try(tkconfigure(tk_pb, value = 10, maximum = 100), silent = T)
+  
+  
   
   # define algrorithm for rasterization of network lines
   # find_algorithms("rasterize")
@@ -79,12 +100,23 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   # execute algorithm
   run_qgis(alg = alg, params = args, load_output = T)
   
-  # load rasterized network
+  # report status
+  try(tkconfigure(tk_lab, text = "Raster wird geladen..."), silent = T)
+  try(tkconfigure(tk_pb, value = 50, maximum = 100), silent = T)
+  
+  
+  # load and reproject rasterized network
   tras <- raster(args$INPUT_RASTER)
+  tras <- projectRaster(tras, crs = proj)
+  
+  
+  # report status
+  try(tkconfigure(tk_lab, text = "Erstelle Transition-Raster..."), silent = T)
+  try(tkconfigure(tk_pb, value = 60, maximum = 100), silent = T)
   
   
   # build transition raster
-  trans <- transition(tras, transitionFunction = max, 8)
+  trans <- transition(tras, transitionFunction = function(x){1}, directions = 16)
   
   # conduct geographic correction
   trans <- geoCorrection(trans)
@@ -97,20 +129,38 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   colnames(out@data) <- frColN
   
   
+  # report status
+  try(tkconfigure(tk_lab, text = "Berechne Reisekosten..."), silent = T)
+  try(tkconfigure(tk_pb, value = 80, maximum = 100), silent = T)
+  
+  
   # calculate travel cost
   costs <- accCost(trans, toPoints)
   
-  # reproject to starting points
-  costs <- projectRaster(costs, crs = proj)
   
   # adjust values for cell size and replace infinite values
-  values(costs) <- values(costs) * transRasCellSize
   values(costs)[which(values(costs) == Inf)] <- NA
+  
+
+  # report status
+  try(tkconfigure(tk_lab, text = "Extrahiere Distanzen für Start-Features..."), silent = T)
+  try(tkconfigure(tk_pb, value = 90, maximum = 100), silent = T)
   
   
   # get values for each starting location (shape)
   out <- extract(x = costs, y = out, fun = mean, na.rm = T, sp = T)
-  colnames(out@data)[ncol(out@data)] <- "Distance"
+  colnames(out@data)[ncol(out@data)] <- "Distanz"
+  
+  
+  # correct for starting features which intersect target features
+  inters <- raster::intersect(out, toPoints)
+  if (nrow(inters) > 0){
+    inters_pos <- which(is.na(over(out, inters)[,1]) == F)
+    if (length(inters_pos) > 0) out@data[inters_pos, "Distanz"] <- 0
+  }
+  
+  # close progress bar
+  tkdestroy(tk)
       
   return(list(out_poly = out, out_ras = costs))
   

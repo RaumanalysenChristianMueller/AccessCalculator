@@ -26,11 +26,11 @@ createTransitionRaster <- function(networkLines, transRasCellSize, studyArea){
   
   # create raster
   ras <- raster(resolution = rep(transRasCellSize, 2), ext = ext, crs = proj)
-  values(ras) <- 0
+  values(ras) <- NA
   
   # prepare dummy field in vector data
   if (!("AccessDum" %in% colnames(networkLines@data))){
-    networkLines@data <- cbind(networkLines@data, AccessDum = transRasCellSize)
+    networkLines@data <- cbind(networkLines@data, AccessDum = 1)
   }
   
   # define algrorithm for rasterization of network lines
@@ -44,12 +44,13 @@ createTransitionRaster <- function(networkLines, transRasCellSize, studyArea){
   # execute algorithm
   run_qgis(alg = alg, params = args, load_output = T)
   
-  # load rasterized network
+  # load and reproject rasterized network
   tras <- raster(args$INPUT_RASTER)
+  tras <- projectRaster(tras, crs = proj)
   
   
   # build transition raster
-  trans <- transition(tras, transitionFunction = max, 8)
+  trans <- transition(tras, transitionFunction = function(x){1}, directions = 16)
   
   # conduct geographic correction
   trans <- geoCorrection(trans)
