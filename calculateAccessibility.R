@@ -55,15 +55,16 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   # create progress bar
   try(tk <- tktoplevel(), silent = T)
   try(tk2ico.setFromFile(win = tk, iconfile =  paste0(getwd(), "/Logo.ico")), silent = T)
+  try(font_text <- tkfont.create(family = "Ebrima", size = 12, weight = "bold"), silent = T)
   try(tktitle(tk) <- "Raumanalysen - Christian Mueller - Accessibility Calculator", silent = T)
-  try(tk_lab <- tk2label(tk), silent = T)
-  try(tk_pb <- tk2progress(tk, length = 400), silent = T)
+  try(tk_lab <- tk2label(tk, font = font_text), silent = T)
+  try(tk_pb <- tk2progress(tk, length = 500), silent = T)
   try(tkgrid(tk_lab, row = 0), silent = T)
   try(tkgrid(tk_pb, row = 1), silent = T)
   
   
   # report status
-  try(tkconfigure(tk_lab, text = "Analyseraster wird vorbereitet..."), silent = T)
+  try(tkconfigure(tk_lab, text = "Analyse-Raster wird vorbereitet..."), silent = T)
   try(tkconfigure(tk_pb, value = 5, maximum = 100), silent = T)
   
   
