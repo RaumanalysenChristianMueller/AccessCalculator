@@ -57,6 +57,7 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   try(tk2ico.setFromFile(win = tk, iconfile =  paste0(getwd(), "/Logo.ico")), silent = T)
   try(font_text <- tkfont.create(family = "Ebrima", size = 12, weight = "bold"), silent = T)
   try(tktitle(tk) <- "Raumanalysen - Christian Mueller - Accessibility Calculator", silent = T)
+  try(tk_lab <- tk2label(tk), silent = T)
   try(tk_lab <- tk2label(tk, font = font_text), silent = T)
   try(tk_pb <- tk2progress(tk, length = 500), silent = T)
   try(tkgrid(tk_lab, row = 0), silent = T)
