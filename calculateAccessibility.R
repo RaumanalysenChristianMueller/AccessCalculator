@@ -19,10 +19,10 @@
 # Untersuchungsgebiet = readOGR("C:/HochschuleBochum/Daten/Bochum", "StudyArea")
 
 # test parameters for linux
-# Ausgangspunkte = readOGR("/media/sf_HochschuleBochum/Daten/Bochum/Stadtgruen", "Gruenflaechen")
-# Zu_erreichende_Punkte = readOGR("/media/sf_HochschuleBochum/Daten/Bochum/Hiwis_Datenerhebung_Bochum/einzelPOIs", "OwnSurvey_rathaus")
-# Wegenetz = readOGR("/media/sf_HochschuleBochum/Daten/Bochum/Netzwerke", "FussWanderwege")
-# Untersuchungsgebiet = readOGR("/media/sf_HochschuleBochum/Daten/Bochum", "StudyArea")
+# Ausgangspunkte = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/ALKIS", "Wohngebaeude")
+# Zu_erreichende_Punkte = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/OSM", "Kindergaerten")
+# Wegenetz = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/OSM", "Wegenetz")
+# Untersuchungsgebiet = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/Verwaltungsgrenzen", "Bergheim")
 
 
 # rewrite variable names (as GUI is in German)
@@ -33,7 +33,7 @@ studyArea <- Untersuchungsgebiet
 transRasCellSize <- 10
 
 
-# defince function
+# define function
 calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea, gridCellSize){
   
   # load packages
@@ -56,12 +56,13 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   try(tk <- tktoplevel(), silent = T)
   try(tk2ico.setFromFile(win = tk, iconfile =  paste0(getwd(), "/Logo.ico")), silent = T)
   try(font_text <- tkfont.create(family = "Ebrima", size = 12, weight = "bold"), silent = T)
-  try(tktitle(tk) <- "Raumanalysen - Christian Mueller - Accessibility Calculator", silent = T)
+  try(tktitle(tk) <- "Raumanalysen - Christian Mueller - AccessibilityCalculator", silent = T)
   try(tk_lab <- tk2label(tk), silent = T)
   try(tk_lab <- tk2label(tk, font = font_text), silent = T)
-  try(tk_pb <- tk2progress(tk, length = 500), silent = T)
+  try(tk_pb <- tk2progress(tk, length = 700), silent = T)
   try(tkgrid(tk_lab, row = 0), silent = T)
   try(tkgrid(tk_pb, row = 1), silent = T)
+  try(tkraise(tk), silent = T)
   
   
   # report status
@@ -77,7 +78,7 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   
   # create raster
   ras <- raster(resolution = rep(transRasCellSize, 2), ext = ext, crs = proj)
-  values(ras) <- NA
+  raster::values(ras) <- NA
   
   # prepare dummy field in vector data
   if (!("AccessDum" %in% colnames(networkLines@data))){
@@ -141,7 +142,7 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   
   
   # adjust values for cell size and replace infinite values
-  values(costs)[which(values(costs) == Inf)] <- NA
+  raster::values(costs)[which(raster::values(costs) == Inf)] <- NA
   
 
   # report status
@@ -150,8 +151,13 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   
   
   # get values for each starting location (shape)
-  out <- extract(x = costs, y = out, fun = mean, na.rm = T, sp = T)
+  out <- raster::extract(x = costs, y = out, fun = mean, na.rm = T, sp = T)
   colnames(out@data)[ncol(out@data)] <- "Distanz"
+  
+  
+  # report status
+  try(tkconfigure(tk_lab, text = "Korrigiere Start-Features, die sich mit Ziel-Features überschneiden..."), silent = T)
+  try(tkconfigure(tk_pb, value = 95, maximum = 100), silent = T)
   
   
   # correct for starting features which intersect target features
@@ -162,7 +168,7 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   }
   
   # close progress bar
-  tkdestroy(tk)
+  try(tkdestroy(tk),  silent = T)
       
   return(list(out_poly = out, out_ras = costs))
   
@@ -175,5 +181,3 @@ res <- calculateAccessibility(toPoints, fromPoints, networkLines, studyArea, tra
 # write to file
 Ausgabe_Shapefile = res$out_poly
 Ausgabe_Raster = res$out_ras
-
-
