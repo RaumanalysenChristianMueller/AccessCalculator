@@ -19,10 +19,10 @@
 # Untersuchungsgebiet = readOGR("C:/HochschuleBochum/Daten/Bochum", "StudyArea")
 
 # test parameters for linux
-# Ausgangspunkte = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/ALKIS", "Wohngebaeude")
-# Zu_erreichende_Punkte = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/OSM", "Kindergaerten")
-# Wegenetz = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/OSM", "Wegenetz")
-# Untersuchungsgebiet = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/Verwaltungsgrenzen", "Bergheim")
+# Ausgangspunkte = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/vorbereiteteDaten_Backup", "Wohngebaeude")
+# Zu_erreichende_Punkte = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/vorbereiteteDaten_Backup", "Kindergaerten")
+# Wegenetz = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/vorbereiteteDaten_Backup", "Wegenetz")
+# Untersuchungsgebiet = readOGR("/media/sf_Raumanalysen_ChristianMueller/Schulungen/QGIS/Fortgeschrittene/FSA_Mar_2018/Daten/vorbereiteteDaten_Backup", "Bergheim")
 
 
 # rewrite variable names (as GUI is in German)
@@ -31,6 +31,7 @@ fromPoints <- Ausgangspunkte
 networkLines <- Wegenetz
 studyArea <- Untersuchungsgebiet
 transRasCellSize <- 10
+bufSize <- 80
 
 
 # define function
@@ -63,6 +64,7 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   try(tkgrid(tk_lab, row = 0), silent = T)
   try(tkgrid(tk_pb, row = 1), silent = T)
   try(tkraise(tk), silent = T)
+  try(tk_center(tk), silent = T)
   
   
   # report status
@@ -149,10 +151,14 @@ calculateAccessibility <- function(toPoints, fromPoints, networkLines, studyArea
   try(tkconfigure(tk_lab, text = "Extrahiere Distanzen für Start-Features..."), silent = T)
   try(tkconfigure(tk_pb, value = 90, maximum = 100), silent = T)
   
+  # buffer around starting to ensure network connection
+  buf <- gBuffer(out, byid = T, width = bufSize)
+  
   
   # get values for each starting location (shape)
-  out <- raster::extract(x = costs, y = out, fun = mean, na.rm = T, sp = T)
-  colnames(out@data)[ncol(out@data)] <- "Distanz"
+  buf <- raster::extract(x = costs, y = buf, fun = mean, na.rm = T, sp = T)
+  colnames(buf@data)[ncol(buf@data)] <- "Distanz"
+  out@data <- buf@data
   
   
   # report status
